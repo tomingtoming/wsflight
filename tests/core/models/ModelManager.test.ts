@@ -1,37 +1,39 @@
-// filepath: /Users/toming/wsflight/tests/core/models/ModelManager.test.ts
 import { assertEquals, assertExists, assertInstanceOf } from "https://deno.land/std@0.212.0/assert/mod.ts";
 import { beforeEach, describe, it } from "https://deno.land/std@0.212.0/testing/bdd.ts";
 import { ModelManager } from "../../../src/core/models/ModelManager.ts";
 import * as THREE from 'three';
 
 // ThreeJSのテスト用にモックするためのヘルパー
-const mockThree = {
-  Group: class MockGroup {
-    name = "";
-    children: any[] = [];
-    visible = true;
-    position = { copy: (pos: any) => {} };
-    rotation = { copy: (rot: any) => {} };
-    quaternion = { copy: (quat: any) => {} };
-    scale = { set: (x: number, y: number, z: number) => {} };
-    add(child: any) {
-      this.children.push(child);
-    }
-    clone() {
-      return new mockThree.Group();
-    }
-    traverse(callback: (object: any) => void) {
-      callback(this);
-      for (const child of this.children) {
-        if (typeof child.traverse === 'function') {
-          child.traverse(callback);
-        } else {
-          callback(child);
-        }
-      }
+class MockGroup {
+  name = "";
+  children: MockGroup[] = [];
+  visible = true;
+  position = { copy: (pos: any) => {} };
+  rotation = { copy: (rot: any) => {} };
+  quaternion = { copy: (quat: any) => {} };
+  scale = { set: (x: number, y: number, z: number) => {} };
+  
+  constructor(name = "") {
+    this.name = name;
+  }
+  
+  add(child: MockGroup) {
+    this.children.push(child);
+  }
+  
+  clone(): MockGroup {
+    const cloned = new MockGroup(this.name);
+    cloned.children = this.children.map(child => child.clone());
+    return cloned;
+  }
+  
+  traverse(callback: (object: MockGroup) => void) {
+    callback(this);
+    for (const child of this.children) {
+      child.traverse(callback);
     }
   }
-};
+}
 
 describe("ModelManager", () => {
   let modelManager: ModelManager;
@@ -67,12 +69,18 @@ describe("ModelManager", () => {
     const manager = modelManager as any;
     
     // モックデータを使ってキャッシュが機能することを確認
-    const mockGroup = new mockThree.Group();
-    mockGroup.name = "TestModel";
+    const mockGroup = new MockGroup("TestModel");
+    const childGroup = new MockGroup("Child");
+    mockGroup.add(childGroup);
+    
+    // キャッシュにモデルを設定
     manager.modelCache.set("test/path.dnm", mockGroup);
     
+    // キャッシュからモデルを取得
     const result = await modelManager.loadDNM("test/path.dnm");
     assertExists(result);
     assertEquals(result.name, "TestModel");
+    assertEquals(result.children.length, 1);
+    assertEquals(result.children[0].name, "Child");
   });
 });
