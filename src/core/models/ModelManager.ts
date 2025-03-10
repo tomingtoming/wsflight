@@ -1,8 +1,8 @@
 // filepath: /Users/toming/wsflight/src/core/models/ModelManager.ts
 import * as THREE from 'three';
-import { IModelManager } from '../../physics/types';
-import { DNMLoader } from './loaders/DNMLoader';
-import { SRFLoader } from './loaders/SRFLoader';
+import { IModelManager } from '../../physics/types.ts';
+import { DNMLoader } from './loaders/DNMLoader.ts';
+import { SRFLoader } from './loaders/SRFLoader.ts';
 
 /**
  * 3Dモデルの読み込みと管理を行うクラス
