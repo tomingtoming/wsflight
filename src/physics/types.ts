@@ -83,3 +83,168 @@ export interface Controls {
     flaps: number;      // フラップ位置（0 to 1）
     throttle: number;   // スロットル位置（0 to 1）
 }
+
+// 大気特性を表す型
+export interface AtmosphericData {
+    density: number;    // 大気密度（kg/m^3）
+    machOne: number;    // マッハ1の速度（m/s）
+    temperature: number; // 温度（K）
+}
+
+// エンジンインターフェース（すべてのエンジンタイプに共通）
+export interface IEngine {
+    update(deltaTime: number, airDensity: number): void;
+    setThrottle(value: number): void;
+    getThrottle(): number;
+    getCurrentRPM(): number;
+    getThrust(): number;
+}
+
+// 空力モデルインターフェース
+export interface IAerodynamicsModel {
+    calculateForces(
+        velocity: Vector3,
+        attitude: Attitude,
+        controls: Controls,
+        airDensity: number
+    ): { lift: Vector3, drag: Vector3, moments: Attitude };
+    getLiftCoefficient(angleOfAttack: number): number;
+    getDragCoefficient(liftCoefficient: number): number;
+}
+
+// カメラインターフェース
+export interface ICameraController {
+    update(aircraft: Aircraft): void;
+    setCameraMode(mode: CameraMode): void;
+    getCameraMode(): CameraMode;
+}
+
+// カメラモード
+export enum CameraMode {
+    COCKPIT = 0,
+    EXTERNAL = 1,
+    CHASE = 2,
+    TOWER = 3
+}
+
+// HUDインターフェース
+export interface IHUDManager {
+    update(aircraftData: AircraftData): void;
+    setVisible(visible: boolean): void;
+    showDemoScreen(visible: boolean): void;
+}
+
+// 入力ハンドラインターフェース
+export interface IInputHandler {
+    update(): void;
+    setDemo(isDemo: boolean): void;
+    addKeyboardListeners(): void;
+    addMouseListeners(): void;
+    removeAllListeners(): void;
+    getMouseControlsEnabled(): boolean;
+    setMouseControlsEnabled(enabled: boolean): void;
+}
+
+// モデルローダーインターフェース
+export interface IModelLoader {
+    loadModel(path: string): Promise<THREE.Object3D>;
+    getLoadedModel(name: string): THREE.Object3D | null;
+}
+
+// 航空機データ（HUDや他のシステムに渡すためのデータ）
+export interface AircraftData {
+    position: Vector3;
+    rotation: Attitude;
+    velocity: Vector3;
+    altitude: number;
+    speed: number;
+    throttle: number;
+    rpm: number;
+    cameraMode: CameraMode;
+    mouseJoystickEnabled: boolean;
+}
+
+// 物理環境インターフェース
+export interface IPhysicsEnvironment {
+    getAirDensity(altitude: number): number;
+    getMachOne(altitude: number): number;
+    getGravity(): number;
+    getWind(position: Vector3): Vector3;
+}
+
+// Aircraft クラスのインターフェース（参照用）
+export interface Aircraft {
+    update(deltaTime: number): void;
+    setControls(newControls: Partial<Controls>): void;
+    setThrottle(throttle: number): void;
+    getPosition(): Vector3;
+    setPosition(position: Vector3): void;
+    setVelocity(velocity: Vector3): void;
+    setRotation(rotation: Attitude): void;
+    getRotation(): Attitude;
+    getVelocity(): Vector3;
+    getCurrentRPM(): number;
+    getControls(): Controls;
+}
+
+// シーン管理インターフェース
+export interface ISceneManager {
+    createScene(): void;
+    addAircraft(aircraft: THREE.Object3D): void;
+    updateAircraftPosition(position: Vector3, rotation: Attitude): void;
+    render(camera: THREE.Camera): void;
+    resize(): void;
+}
+
+// モデルマネージャーインターフェイス
+export interface IModelManager {
+    /**
+     * YSFLIGHTのDNM（Dynamic Model）ファイルを読み込む
+     * @param url DNMファイルのURL
+     * @param useCache キャッシュを使用するかどうか
+     * @returns 読み込まれたモデルのGroup
+     */
+    loadDNM(url: string, useCache?: boolean): Promise<THREE.Group>;
+    
+    /**
+     * YSFLIGHTのSRF（Surface）ファイルを読み込む
+     * @param url SRFファイルのURL
+     * @param useCache キャッシュを使用するかどうか
+     * @returns 読み込まれたモデル
+     */
+    loadSRF(url: string, useCache?: boolean): Promise<THREE.Group>;
+    
+    /**
+     * テクスチャを読み込む
+     * @param url テクスチャのURL
+     * @param useCache キャッシュを使用するかどうか
+     * @returns 読み込まれたテクスチャ
+     */
+    loadTexture(url: string, useCache?: boolean): Promise<THREE.Texture>;
+    
+    /**
+     * モデルにテクスチャを適用する
+     * @param model 対象のモデル
+     * @param texturePath テクスチャパス
+     */
+    applyTexture(model: THREE.Group, texturePath: string): Promise<void>;
+    
+    /**
+     * キャッシュをクリアする
+     */
+    clearCache(): void;
+    
+    /**
+     * DNMモデルのノードを回転させる
+     * @param model DNMモデルのルートグループ
+     * @param nodeName 回転させるノードの名前
+     * @param angle 回転角度（ラジアン）
+     */
+    rotateNode(model: THREE.Group, nodeName: string, angle: number): void;
+    
+    /**
+     * 簡易的な航空機モデルを作成
+     * @returns 基本航空機モデル
+     */
+    createBasicAircraftModel(): THREE.Group;
+}
