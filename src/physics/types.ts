@@ -81,4 +81,5 @@ export interface Controls {
     aileron: number;    // エルロン位置（-1 to 1）
     rudder: number;     // ラダー位置（-1 to 1）
     flaps: number;      // フラップ位置（0 to 1）
+    throttle: number;   // スロットル位置（0 to 1）
 }

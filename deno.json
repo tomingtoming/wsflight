@@ -14,7 +14,9 @@
     "oak": "https://deno.land/x/oak@v12.6.1/mod.ts",
     "std/": "https://deno.land/std@0.210.0/",
     "std/path/": "https://deno.land/std@0.210.0/path/",
-    "esbuild": "https://deno.land/x/esbuild@v0.19.12/mod.js"
+    "esbuild": "https://deno.land/x/esbuild@v0.19.12/mod.js",
+    "three": "https://esm.sh/three@0.150.1",
+    "three/": "https://esm.sh/three@0.150.1/"
   },
   "lint": {
     "rules": {

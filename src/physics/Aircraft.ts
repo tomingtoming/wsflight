@@ -76,7 +76,8 @@ export class Aircraft {
             elevator: 0,
             aileron: 0,
             rudder: 0,
-            flaps: 0
+            flaps: 0,
+            throttle: 0
         };
     }
     
@@ -171,15 +172,38 @@ export class Aircraft {
         return base + diff * t;
     }
 
-    // 揚力係数の計算
+    /**
+     * 揚力係数の計算
+     * YSFLIGHTのfsairplaneproperty.cppを参考に、より現実的な失速挙動を実装
+     * @param angleOfAttack 迎え角（ラジアン）
+     * @returns 揚力係数
+     */
     private getLiftCoefficient(angleOfAttack: number): number {
+        // 通常の飛行領域での揚力係数計算
+        const normalLift = this.aerodynamics.liftSlopeCurve *
+                          (angleOfAttack - this.aerodynamics.zeroLiftAoA);
+        
+        // 失速後の挙動（非線形）
         if (angleOfAttack > this.aerodynamics.stallAngleHigh) {
-            return Math.cos(angleOfAttack) * 2 * Math.PI;
+            // 失速後の揚力低下を計算
+            const stallExcess = angleOfAttack - this.aerodynamics.stallAngleHigh;
+            const stallFactor = Math.exp(-stallExcess * 5); // 指数関数的に減少
+            
+            // 失速時の揚力係数（通常の揚力係数に失速係数を掛ける）
+            const stallLift = normalLift * stallFactor;
+            
+            // 失速後の揚力は、通常の揚力と失速時の揚力を補間
+            return stallLift + (1.0 - stallFactor) * Math.cos(angleOfAttack) * 2 * Math.PI;
         } else if (angleOfAttack < this.aerodynamics.stallAngleLow) {
-            return Math.cos(angleOfAttack) * 2 * Math.PI;
+            // 負の失速（背面飛行時など）の挙動
+            const stallExcess = this.aerodynamics.stallAngleLow - angleOfAttack;
+            const stallFactor = Math.exp(-stallExcess * 5);
+            
+            const stallLift = normalLift * stallFactor;
+            return stallLift + (1.0 - stallFactor) * Math.cos(angleOfAttack) * 2 * Math.PI;
         } else {
-            return this.aerodynamics.liftSlopeCurve * 
-                   (angleOfAttack - this.aerodynamics.zeroLiftAoA);
+            // 通常の飛行領域
+            return normalLift;
         }
     }
 
@@ -201,10 +225,36 @@ export class Aircraft {
             this.velocity.y * this.velocity.y +
             this.velocity.z * this.velocity.z
         );
+        
+        // 速度がほぼゼロの場合は力を0とする（重力のみ）
+        if (velocityMagnitude < 0.001) {
+            return { x: 0, y: -9.81 * this.mass, z: 0 };
+        }
+        
         const dynamicPressure = 0.5 * airDensity * velocityMagnitude * velocityMagnitude;
 
-        // 迎え角の計算（シンプルな近似）
-        const angleOfAttack = Math.atan2(this.velocity.y, this.velocity.x);
+        // 機体の前方ベクトル（機体座標系でのX軸正方向）
+        const forwardVector = {
+            x: Math.cos(this.rotation.yaw) * Math.cos(this.rotation.pitch),
+            y: Math.sin(this.rotation.pitch),
+            z: Math.sin(this.rotation.yaw) * Math.cos(this.rotation.pitch)
+        };
+        
+        // 速度ベクトルの正規化
+        const normalizedVelocity = {
+            x: this.velocity.x / velocityMagnitude,
+            y: this.velocity.y / velocityMagnitude,
+            z: this.velocity.z / velocityMagnitude
+        };
+        
+        // 前方ベクトルと速度ベクトルの内積（cosθ）
+        const dotProduct =
+            forwardVector.x * normalizedVelocity.x +
+            forwardVector.y * normalizedVelocity.y +
+            forwardVector.z * normalizedVelocity.z;
+        
+        // 迎え角の計算（arccos(dotProduct)）
+        const angleOfAttack = Math.acos(Math.max(-1, Math.min(1, dotProduct)));
 
         // 揚力と抗力の係数
         const liftCoefficient = this.getLiftCoefficient(angleOfAttack);
@@ -213,6 +263,27 @@ export class Aircraft {
         // 揚力と抗力の計算
         const lift = dynamicPressure * this.aerodynamics.wingArea * liftCoefficient;
         const drag = dynamicPressure * this.aerodynamics.wingArea * dragCoefficient;
+
+        // 揚力方向の計算（速度ベクトルに垂直で、上向き成分を持つ）
+        // 速度ベクトルと上方向ベクトル(0,1,0)の外積で揚力方向を計算
+        const liftDirection = {
+            x: normalizedVelocity.z,
+            y: 0,
+            z: -normalizedVelocity.x
+        };
+        
+        // 揚力方向の正規化
+        const liftDirectionMagnitude = Math.sqrt(
+            liftDirection.x * liftDirection.x +
+            liftDirection.y * liftDirection.y +
+            liftDirection.z * liftDirection.z
+        );
+        
+        if (liftDirectionMagnitude > 0.001) {
+            liftDirection.x /= liftDirectionMagnitude;
+            liftDirection.y /= liftDirectionMagnitude;
+            liftDirection.z /= liftDirectionMagnitude;
+        }
 
         // エンジン推力の計算
         let thrust = 0;
@@ -227,15 +298,16 @@ export class Aircraft {
         // 重力
         const gravity = -9.81 * this.mass;
 
-        // 制御面の影響を計算
-        const elevatorEffect = this.controls.elevator * 5000; // 適当な係数
-        const aileronEffect = this.controls.aileron * 2000;   // 適当な係数
+        // 制御面の影響を計算（より大きな値に調整）
+        const elevatorEffect = this.controls.elevator * 10000; // 係数を大きくして効果を強化
+        const aileronEffect = this.controls.aileron * 5000;   // 係数を大きくして効果を強化
+        const rudderEffect = this.controls.rudder * 3000;     // ラダー効果も追加
 
         // 力の合成
         return {
-            x: thrust - drag,
-            y: lift + gravity + elevatorEffect, // エレベーターの効果を追加
-            z: aileronEffect  // エルロンの効果を追加
+            x: forwardVector.x * thrust - normalizedVelocity.x * drag + liftDirection.x * lift,
+            y: forwardVector.y * thrust - normalizedVelocity.y * drag + liftDirection.y * lift + gravity + elevatorEffect,
+            z: forwardVector.z * thrust - normalizedVelocity.z * drag + liftDirection.z * lift + aileronEffect + rudderEffect
         };
     }
 
@@ -616,6 +688,8 @@ export class Aircraft {
     // スロットル設定
     setThrottle(throttle: number): void {
         this.engine.throttle = Math.max(0, Math.min(1, throttle));
+        // Controlsインターフェースとの整合性のためにcontrolsにもthrottleを設定
+        this.controls.throttle = this.engine.throttle;
     }
 
     // 現在の状態を取得するメソッド群
@@ -651,6 +725,8 @@ export class Aircraft {
     }
 
     getControls(): Controls {
+        // エンジンのスロットル値とコントロールのスロットル値を同期
+        this.controls.throttle = this.engine.throttle;
         return { ...this.controls };
     }
 }

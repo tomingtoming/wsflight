@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Aircraft } from '../../src/physics/Aircraft.ts';
+import { DNMLoader, SRFLoader } from './loaders';
 
 class FlightSimulator {
     private scene: THREE.Scene;
@@ -25,6 +26,15 @@ class FlightSimulator {
         { pos: new THREE.Vector3(0, 15, -50), lookAt: new THREE.Vector3(0, 0, 0) },     // 追跡
         { pos: new THREE.Vector3(200, 50, 200), lookAt: new THREE.Vector3(0, 0, 0) }    // タワー
     ];
+
+    // YSFLIGHTモデルローダー
+    private dnmLoader: DNMLoader;
+    private srfLoader: SRFLoader;
+    private ysfModels: {
+        f18: THREE.Group | null;
+        f18cockpit: THREE.Mesh | null;
+        f18coll: THREE.Mesh | null;
+    };
 
     constructor() {
         this.scene = new THREE.Scene();
@@ -53,9 +63,22 @@ class FlightSimulator {
         
         this.aircraft = new Aircraft();
         
+        // モデルローダーの初期化
+        this.dnmLoader = new DNMLoader();
+        this.srfLoader = new SRFLoader();
+        this.ysfModels = {
+            f18: null,
+            f18cockpit: null,
+            f18coll: null
+        };
+        
+        // 現在はThree.jsの基本ジオメトリで機体を作成
         this.aircraftMesh = new THREE.Group();
         this.createAircraftMesh();
         this.scene.add(this.aircraftMesh);
+        
+        // YSFLIGHTのモデルを読み込む（将来的に実装）
+        // this.loadYSFLIGHTModels();
         
         this.createTerrain();
         this.addLights();
@@ -63,6 +86,32 @@ class FlightSimulator {
         this.createDemoFlightPath();
 
         this.animate();
+    }
+
+    /**
+     * YSFLIGHTのモデルファイルを読み込む
+     * 現在は実装されていないため、コメントアウト
+     */
+    private async loadYSFLIGHTModels(): Promise<void> {
+        try {
+            // F-18の機体モデル
+            this.ysfModels.f18 = await this.dnmLoader.load('YSFLIGHT/runtime/aircraft/f18/f18.dnm');
+            
+            // F-18のコックピットモデル
+            this.ysfModels.f18cockpit = await this.srfLoader.load('YSFLIGHT/runtime/aircraft/f18/f18cockpit.srf');
+            
+            // F-18の衝突判定モデル
+            this.ysfModels.f18coll = await this.srfLoader.load('YSFLIGHT/runtime/aircraft/f18/f18coll.srf');
+            
+            console.log('YSFLIGHTモデルの読み込みが完了しました');
+            
+            // 読み込んだモデルを使用する場合は、既存のaircraftMeshを置き換える
+            // this.scene.remove(this.aircraftMesh);
+            // this.aircraftMesh = this.ysfModels.f18;
+            // this.scene.add(this.aircraftMesh);
+        } catch (error) {
+            console.error('YSFLIGHTモデルの読み込みに失敗しました:', error);
+        }
     }
 
     private createDemoFlightPath(): void {
@@ -97,34 +146,57 @@ class FlightSimulator {
     }
 
     private createAircraftMesh(): void {
-        const fuselage = new THREE.Mesh(
-            new THREE.CylinderGeometry(1, 1, 10, 12),
-            new THREE.MeshPhongMaterial({ color: 0x808080 })
-        );
+        // F-18風の機体を作成
+        // 機体本体（胴体）
+        const fuselageGeometry = new THREE.CylinderGeometry(1.5, 1, 15, 16);
+        const fuselageMaterial = new THREE.MeshPhongMaterial({ color: 0x2E4053 }); // ダークブルー
+        const fuselage = new THREE.Mesh(fuselageGeometry, fuselageMaterial);
         fuselage.rotation.z = Math.PI / 2;
 
-        const wing = new THREE.Mesh(
-            new THREE.BoxGeometry(15, 0.5, 3),
-            new THREE.MeshPhongMaterial({ color: 0x808080 })
-        );
-        wing.position.y = 0.5;
+        // コックピット
+        const cockpitGeometry = new THREE.SphereGeometry(1.2, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+        const cockpitMaterial = new THREE.MeshPhongMaterial({ color: 0x85C1E9, transparent: true, opacity: 0.7 }); // 半透明ブルー
+        const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+        cockpit.position.set(5, 1, 0);
+        cockpit.rotation.z = -Math.PI / 2;
 
-        const tailFin = new THREE.Mesh(
-            new THREE.BoxGeometry(0.5, 3, 2),
-            new THREE.MeshPhongMaterial({ color: 0x808080 })
-        );
-        tailFin.position.set(-5, 1.5, 0);
+        // 主翼
+        const wingGeometry = new THREE.BoxGeometry(20, 0.5, 6);
+        const wingMaterial = new THREE.MeshPhongMaterial({ color: 0x2E4053 });
+        const wing = new THREE.Mesh(wingGeometry, wingMaterial);
+        wing.position.y = 0;
 
-        const tailWing = new THREE.Mesh(
-            new THREE.BoxGeometry(4, 0.5, 1),
-            new THREE.MeshPhongMaterial({ color: 0x808080 })
-        );
-        tailWing.position.set(-5, 0.5, 0);
+        // 水平尾翼
+        const tailWingGeometry = new THREE.BoxGeometry(8, 0.3, 3);
+        const tailWingMaterial = new THREE.MeshPhongMaterial({ color: 0x2E4053 });
+        const tailWing = new THREE.Mesh(tailWingGeometry, tailWingMaterial);
+        tailWing.position.set(-6, 0, 0);
 
+        // 垂直尾翼
+        const tailFinGeometry = new THREE.BoxGeometry(4, 3, 0.3);
+        const tailFinMaterial = new THREE.MeshPhongMaterial({ color: 0x2E4053 });
+        const tailFin = new THREE.Mesh(tailFinGeometry, tailFinMaterial);
+        tailFin.position.set(-6, 1.5, 0);
+
+        // エンジンノズル
+        const nozzleGeometry = new THREE.CylinderGeometry(0.8, 1, 2, 16);
+        const nozzleMaterial = new THREE.MeshPhongMaterial({ color: 0x7F8C8D }); // メタリックグレー
+        const nozzleLeft = new THREE.Mesh(nozzleGeometry, nozzleMaterial);
+        nozzleLeft.position.set(-7.5, 0, 1);
+        nozzleLeft.rotation.z = Math.PI / 2;
+        
+        const nozzleRight = new THREE.Mesh(nozzleGeometry, nozzleMaterial);
+        nozzleRight.position.set(-7.5, 0, -1);
+        nozzleRight.rotation.z = Math.PI / 2;
+
+        // 機体に各パーツを追加
         this.aircraftMesh.add(fuselage);
+        this.aircraftMesh.add(cockpit);
         this.aircraftMesh.add(wing);
-        this.aircraftMesh.add(tailFin);
         this.aircraftMesh.add(tailWing);
+        this.aircraftMesh.add(tailFin);
+        this.aircraftMesh.add(nozzleLeft);
+        this.aircraftMesh.add(nozzleRight);
     }
 
     private createTerrain(): void {
@@ -155,10 +227,89 @@ class FlightSimulator {
         this.scene.add(sunLight);
     }
 
+    // マウス入力関連
+    private mouseX: number = 0;
+    private mouseY: number = 0;
+    private mouseDown: boolean = false;
+    private mouseSensitivity: number = 0.5; // マウス感度
+    private useMouseAsJoystick: boolean = false; // マウスをジョイスティックとして使用するかどうか
+    private mouseCenter: { x: number, y: number } = { x: 0, y: 0 }; // マウスの中心位置
+
     private setupEventListeners(): void {
         window.addEventListener('resize', () => this.onWindowResize(), false);
         window.addEventListener('keydown', (e) => this.handleKeyDown(e), false);
         window.addEventListener('keyup', (e) => this.handleKeyUp(e), false);
+        
+        // マウス入力イベントの追加
+        this.renderer.domElement.addEventListener('mousemove', (e) => this.handleMouseMove(e), false);
+        this.renderer.domElement.addEventListener('mousedown', (e) => this.handleMouseDown(e), false);
+        this.renderer.domElement.addEventListener('mouseup', (e) => this.handleMouseUp(e), false);
+        this.renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault(), false); // 右クリックメニュー無効化
+    }
+
+    private handleMouseMove(event: MouseEvent): void {
+        if (this.isDemo || !this.useMouseAsJoystick) return;
+
+        // マウス位置を取得
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouseX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouseY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        // マウス位置を使って仮想ジョイスティック入力を計算
+        if (this.mouseDown) {
+            // マウスの中心からの相対位置を計算
+            const dx = this.mouseX - this.mouseCenter.x;
+            const dy = this.mouseY - this.mouseCenter.y;
+            
+            // エルロンとエレベータの値を設定（-1から1の範囲に制限）
+            const aileron = Math.max(-1, Math.min(1, dx * this.mouseSensitivity));
+            const elevator = Math.max(-1, Math.min(1, dy * this.mouseSensitivity));
+            
+            this.aircraft.setControls({
+                aileron: aileron,
+                elevator: elevator
+            });
+        }
+    }
+
+    private handleMouseDown(event: MouseEvent): void {
+        if (this.isDemo) {
+            // デモモード中はクリックでゲーム開始
+            this.startGame();
+            return;
+        }
+
+        if (!this.useMouseAsJoystick) return;
+
+        this.mouseDown = true;
+        
+        // マウスの中心位置を記録
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouseCenter.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouseCenter.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        // 左クリックで武器発射、右クリックで武器選択など
+        if (event.button === 0) {
+            // 左クリック - 将来的に武器発射などに使用
+            console.log("Left mouse button pressed");
+        } else if (event.button === 2) {
+            // 右クリック - 将来的に武器選択などに使用
+            console.log("Right mouse button pressed");
+        }
+    }
+
+    private handleMouseUp(event: MouseEvent): void {
+        if (this.isDemo || !this.useMouseAsJoystick) return;
+
+        this.mouseDown = false;
+        
+        // マウスを離したら制御を中立に戻す
+        if (this.useMouseAsJoystick) {
+            this.aircraft.setControls({
+                aileron: 0,
+                elevator: 0
+            });
+        }
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
@@ -171,9 +322,9 @@ class FlightSimulator {
         // デモモード中は他のキー入力を無視
         if (this.isDemo) return;
 
-        // YSFLIGHTに近いキーバインディング
+        // YSFLIGHTと同じキーバインディング
         switch(event.code) {
-            // 機体操作
+            // 機体操作 - エレベータ/エルロン
             case 'ArrowUp': // エレベータ上（機首下げ）
                 this.aircraft.setControls({ elevator: -1 });
                 break;
@@ -186,22 +337,61 @@ class FlightSimulator {
             case 'ArrowRight': // エルロン右（右ロール）
                 this.aircraft.setControls({ aileron: 1 });
                 break;
-            case 'KeyA': // ラダー左
+                
+            // ラダー制御
+            case 'KeyZ': // ラダー左
                 this.aircraft.setControls({ rudder: -1 });
                 break;
-            case 'KeyD': // ラダー右
+            case 'KeyX': // ラダー中央
+                this.aircraft.setControls({ rudder: 0 });
+                break;
+            case 'KeyC': // ラダー右
                 this.aircraft.setControls({ rudder: 1 });
                 break;
-            case 'KeyW': // スロットル最大
-                this.aircraft.setThrottle(1.0);
+                
+            // スロットル制御
+            case 'KeyQ': // スロットル増加
+                this.aircraft.setThrottle(Math.min(1.0, this.aircraft.getControls().throttle + 0.1));
                 break;
-            case 'KeyS': // スロットル最小
-                this.aircraft.setThrottle(0.0);
+            case 'KeyA': // スロットル減少
+                this.aircraft.setThrottle(Math.max(0.0, this.aircraft.getControls().throttle - 0.1));
                 break;
-            
+            case 'Tab': // アフターバーナー（将来的に実装）
+                console.log("Afterburner toggled");
+                break;
+                
+            // 着陸装置とブレーキ
+            case 'KeyG': // 着陸装置（将来的に実装）
+                console.log("Landing gear toggled");
+                break;
+            case 'KeyB': // スポイラーとブレーキ（将来的に実装）
+                console.log("Spoiler and brake toggled");
+                break;
+                
             // 視点切替
-            case 'KeyC': // カメラモード切替
-                this.cycleCamera();
+            case 'F1': // コックピットビュー
+                this.setCameraMode(0);
+                break;
+            case 'F2': // 外部視点
+                this.setCameraMode(1);
+                break;
+            case 'F3': // 追跡視点
+                this.setCameraMode(2);
+                break;
+            case 'F4': // タワー視点
+                this.setCameraMode(3);
+                break;
+                
+            // マウス操作の切替
+            case 'KeyM': // マウスジョイスティックモード切替
+                this.useMouseAsJoystick = !this.useMouseAsJoystick;
+                this.controls.enabled = !this.useMouseAsJoystick;
+                console.log("Mouse joystick mode: " + (this.useMouseAsJoystick ? "ON" : "OFF"));
+                break;
+                
+            // 武器関連（将来的に実装）
+            case 'Space': // 武器発射
+                console.log("Fire weapon");
                 break;
         }
     }
@@ -219,10 +409,6 @@ class FlightSimulator {
             case 'ArrowRight':
                 this.aircraft.setControls({ aileron: 0 });
                 break;
-            case 'KeyA':
-            case 'KeyD':
-                this.aircraft.setControls({ rudder: 0 });
-                break;
         }
     }
 
@@ -232,7 +418,10 @@ class FlightSimulator {
         
         // 飛行機の位置とカメラをリセット
         this.aircraft = new Aircraft();
-        this.aircraft.setPosition({ x: 0, y: 20, z: 0 });
+        // 高度を上げて、初期速度を設定
+        this.aircraft.setPosition({ x: 0, y: 200, z: 0 });
+        this.aircraft.setVelocity({ x: 50, y: 0, z: 0 }); // 初期速度を設定して飛行状態にする
+        this.aircraft.setThrottle(0.8); // スロットルを80%に設定
         this.updateAircraftPosition();
         
         // カメラを設定
@@ -380,12 +569,26 @@ class FlightSimulator {
         rpmElement.textContent = `RPM: ${Math.round(this.aircraft.getCurrentRPM())}`;
         hudElement.appendChild(rpmElement);
         
+        // スロットル表示
+        const throttleElement = document.createElement('div');
+        throttleElement.className = 'hud-item throttle';
+        throttleElement.textContent = `Throttle: ${Math.round(this.aircraft.getControls().throttle * 100)}%`;
+        hudElement.appendChild(throttleElement);
+        
         // カメラモード表示
         const cameraElement = document.createElement('div');
         cameraElement.className = 'hud-item camera-mode';
         const cameraModes = ['Cockpit', 'External', 'Chase', 'Tower'];
         cameraElement.textContent = `View: ${cameraModes[this.cameraMode]}`;
         hudElement.appendChild(cameraElement);
+        
+        // マウスジョイスティックモード表示
+        if (this.useMouseAsJoystick) {
+            const mouseJoystickElement = document.createElement('div');
+            mouseJoystickElement.className = 'hud-item mouse-joystick';
+            mouseJoystickElement.textContent = 'Mouse Joystick: ON';
+            hudElement.appendChild(mouseJoystickElement);
+        }
     }
     
     private updateDemoScreen(visible: boolean): void {
@@ -415,10 +618,12 @@ class FlightSimulator {
         instructionsElement.innerHTML = `
             <h3>操作方法</h3>
             <p>矢印キー: ピッチとロール制御</p>
-            <p>A/D: ラダー制御</p>
-            <p>W/S: スロットル調整</p>
-            <p>C: 視点切替</p>
-            <p>ESC: メニュー</p>
+            <p>Z/C: ラダー制御</p>
+            <p>Q/A: スロットル調整</p>
+            <p>F1-F4: 視点切替</p>
+            <p>M: マウスジョイスティック切替</p>
+            <p>G: 着陸装置</p>
+            <p>B: ブレーキ</p>
             <p>&nbsp;</p>
             <p>スペースキーでスタート</p>
         `;
