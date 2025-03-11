@@ -61,3 +61,67 @@ flowchart TD
 - Begin detailed documentation for each task.
 - Ensure testing is integrated per feature.
 - Align migration rules with product functionality.
+
+## Development Best Practices (Learned from Implementation)
+
+### Testing and Browser APIs
+- Implement test mode flags in components that use browser APIs (requestAnimationFrame, setTimeout, etc.)
+- Create explicit cleanup methods for all timers and animation frames to prevent memory leaks
+- Use dependency injection or singleton patterns with test-friendly interfaces
+- Provide direct update methods (e.g., updateStep) that bypass animation frames for deterministic testing
+
+### Deno Configuration
+- Configure deno.json properly with:
+  ```json
+  {
+    "lint": {
+      "rules": {
+        "exclude": ["no-explicit-any"],
+        "include": ["recommended"]
+      },
+      "include": ["src/"]
+    },
+    "fmt": {
+      "include": ["src/"],
+      "options": {
+        "lineWidth": 80,
+        "indentWidth": 2,
+        "singleQuote": false
+      }
+    },
+    "compilerOptions": {
+      "lib": ["deno.ns", "dom", "dom.iterable", "dom.asynciterable"]
+    },
+    "imports": {
+      "three": "npm:three@0.160.0",
+      "three/examples/": "npm:/three@0.160.0/examples/"
+    }
+  }
+  ```
+- Install npm packages with `deno add npm:package-name@version`
+- Use proper import paths for npm packages (e.g., "three" instead of relative paths)
+
+### Code Quality
+- Remove async keyword from functions that don't use await
+- Use const instead of let for variables that aren't reassigned
+- Prefix unused parameters with underscore (e.g., _id) to avoid linter warnings
+- Run linter and type checks before committing: `deno lint && deno check src/main.ts`
+- Run tests with proper permissions: `deno test --allow-read --allow-env`
+
+### Collaboration and Communication
+- Clearly document technical decisions and their rationale for other team members
+- Provide detailed explanations when requesting code reviews
+- When fixing bugs, explain both the symptom and the root cause
+- Update documentation immediately when learning new patterns or solutions
+- Share knowledge about browser-specific behaviors and workarounds
+- Maintain regular communication with the architecture team about implementation challenges
+- Document edge cases and testing strategies for complex browser interactions
+
+### Project Management
+- Verify CI passes locally before committing changes
+- Break down complex tasks into smaller, testable units
+- Address technical debt immediately rather than postponing
+- Keep track of browser API limitations and their workarounds
+- Maintain a list of known issues and their status
+- Document performance considerations for browser-based implementations
+- Create explicit test cases for browser-specific behaviors
