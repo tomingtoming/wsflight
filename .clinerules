@@ -3,7 +3,7 @@
 ## Overview
 - Source: Existing C++ flight simulator in `/YSFLIGHT/` directory.
 - Target: Web-based flight simulator using TypeScript, deno, three.js (and possibly other libs).
-- Code, comments, and documentation in English; user conversation in Japanese.
+- Code, comments, commit message, and documentation in English; user conversation in Japanese.
 - Static files copied as is from `/YSFLIGHT/` directory.
 - Keyboard and mouse usage replicated (with adjustments for keys that aren't suitable in a browser, e.g. TAB).
 - Tests written per fix; commit upon all tests passing.
