@@ -140,6 +140,20 @@ const startServer = async () => {
     }
   });
 
+  // YSFLIGHTディレクトリのファイル
+  router.get("/YSFLIGHT/(.*)", async (ctx) => {
+    try {
+      await ctx.send({
+        root: rootDir,
+        path: ctx.request.url.pathname,
+      });
+    } catch (err) {
+      console.error(`Error serving YSFLIGHT file: ${ctx.request.url.pathname}`, err);
+      ctx.response.status = 404;
+      ctx.response.body = "YSFLIGHT file not found";
+    }
+  });
+
   // 他の静的ファイル
   router.get("/(.*)", async (ctx) => {
     try {

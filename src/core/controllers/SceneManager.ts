@@ -1,12 +1,12 @@
 // filepath: /Users/toming/wsflight/src/core/controllers/SceneManager.ts
 import * as THREE from 'three';
-import { Vector3, Attitude, ISceneManager } from '../../physics/types';
+import { Vector3, Attitude } from '../../physics/types.ts';
 
 /**
  * 3Dシーンを管理するクラス
  * 地形、照明、オブジェクトなどを管理する
  */
-export class SceneManager implements ISceneManager {
+export class SceneManager {
     private scene: THREE.Scene;
     private renderer: THREE.WebGLRenderer;
     private aircraft: THREE.Object3D | null = null;

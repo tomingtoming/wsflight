@@ -115,19 +115,19 @@ class FlightSimulator {
      */
     private async loadYSFLIGHTModels(): Promise<void> {
         try {
-            // F-18の機体モデル（DNMLoader経由でThree.jsのGroupとして取得）
-            this.ysfModels.f18 = await this.modelManager.loadDNM('YSFLIGHT/runtime/aircraft/f18/f18.dnm');
+            // F-16の機体モデル（DNMLoader経由でThree.jsのGroupとして取得）
+            // 注: YSFLIGHTのモデルファイルは/f18/サブディレクトリではなく、直接aircraftディレクトリにあります
+            this.ysfModels.f18 = await this.modelManager.loadDNM('YSFLIGHT/runtime/aircraft/f16.dnm');
             
-            // F-18のコックピットモデル（SRFLoader経由）
-            this.ysfModels.f18cockpit = await this.modelManager.loadSRF('YSFLIGHT/runtime/aircraft/f18/f18cockpit.srf');
+            // コックピットモデル（SRFLoader経由）
+            // 注: f18cockpit.srfは存在しないため、代わりにf16cockpit.srfを使用
+            this.ysfModels.f18cockpit = await this.modelManager.loadSRF('YSFLIGHT/runtime/aircraft/f16cockpit.srf');
             
-            // F-18の衝突判定モデル（SRFLoader経由）
-            this.ysfModels.f18coll = await this.modelManager.loadSRF('YSFLIGHT/runtime/aircraft/f18/f18coll.srf');
+            // 衝突判定モデル（SRFLoader経由）
+            // 注: f18coll.srfは存在しないため、代わりにf16coll.srfを使用
+            this.ysfModels.f18coll = await this.modelManager.loadSRF('YSFLIGHT/runtime/aircraft/f16coll.srf');
             
             console.log('YSFLIGHTモデルの読み込みが完了しました');
-            
-            // テクスチャの適用（もし存在すれば）
-            await this.modelManager.applyTexture(this.ysfModels.f18, 'YSFLIGHT/runtime/aircraft/f18/f18.png');
             
             // 読み込んだモデルの配置調整（必要に応じて）
             if (this.ysfModels.f18) {
