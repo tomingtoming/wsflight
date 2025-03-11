@@ -1,1 +1,63 @@
 # wsflight
+
+## Overview
+- Source: Existing C++ flight simulator in `/YSFLIGHT/` directory.
+- Target: Web-based flight simulator using TypeScript, deno, three.js (and possibly other libs).
+- Code, comments, and documentation in English; user conversation in Japanese.
+- Static files copied as is from `/YSFLIGHT/` directory.
+- Keyboard and mouse usage replicated (with adjustments for keys that aren't suitable in a browser, e.g. TAB).
+- Tests written per fix; commit upon all tests passing.
+
+## Implementation Steps (Tickets for Tasks)
+
+1. **Product Analysis**
+   - Analyze documentation (`readme.md`), code in `/YSFLIGHT/src/`, and resource files (`bitmap/`, `runtime/`, etc.).
+   - Document product architecture including graphics, physics simulation, GUI, autopilot, input handling.
+   - Output documented in Markdown file under `/docs/ticket/`.
+
+2. **Component Extraction and Task Breakdown**
+   - Identify core modules: `src/graphics`, `src/dynamics`, `src/gui`, `src/autopilot`, etc.
+   - Define migration rules - how to translate C++ code to TypeScript.
+   - Create separate ticket for each module with detailed steps, implementation guidelines, and testing requirements.
+
+3. **Static Resource Organization and Copy**
+   - Organize image, runtime, and other resource files for use in web context.
+   - Copy necessary files directly from `/YSFLIGHT/` to appropriate location.
+
+4. **Keyboard and Mouse Input Mimicry**
+   - Recreate input behavior in a web browser.
+   - Provide remapping for keys like TAB (or others unsuitable in a browser).
+   - Develop and test input event handling.
+
+5. **Testing Strategy and Commit Protocol**
+   - Implement tests for each component using Deno or other frameworks.
+   - Define a commit strategy: commit after successful test passage.
+   - Write documentation for tests and commit guidelines.
+
+6. **Developer-oriented System Prompt**
+   - Provide an English system prompt for the AI engineers outlining migration guidelines, translation strategies, three.js usage, and testing procedure.
+   - Append detailed prompt in `.clinerules` file; full details in `/docs/ticket/`.
+
+## Overall Process Flow
+
+```mermaid
+flowchart TD
+    A[Product Analysis]
+    B[Component Breakdown]
+    C[Resource Organization]
+    D[Input Handling Re-creation]
+    E[Testing and Commit Strategy]
+    F[Developer System Prompt]
+
+    A --> B
+    B --> C
+    B --> D
+    C --> E
+    D --> E
+    E --> F
+```
+
+## Next Steps
+- Begin detailed documentation for each task.
+- Ensure testing is integrated per feature.
+- Align migration rules with product functionality.
