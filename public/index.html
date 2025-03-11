@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YSFLIGHT Web</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #000;
+        color: #fff;
+        font-family: Arial, sans-serif;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      #loading-screen h1 {
+        font-size: 3em;
+        margin-bottom: 20px;
+      }
+
+      #loading-bar-container {
+        width: 50%;
+        height: 20px;
+        background-color: #333;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      #loading-bar {
+        height: 100%;
+        width: 0%;
+        background-color: #0066cc;
+        transition: width 0.3s ease;
+      }
+
+      #loading-text {
+        margin-top: 10px;
+        font-size: 1.2em;
+      }
+
+      #start-button {
+        margin-top: 30px;
+        padding: 10px 20px;
+        font-size: 1.2em;
+        background-color: #0066cc;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        display: none;
+      }
+
+      #start-button:hover {
+        background-color: #0055aa;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading-screen">
+      <h1>YSFLIGHT Web</h1>
+      <div id="loading-bar-container">
+        <div id="loading-bar"></div>
+      </div>
+      <div id="loading-text">Loading resources...</div>
+      <button id="start-button">Start Flight Simulator</button>
+    </div>
+
+    <script type="module">
+      // Simulate loading progress
+      const loadingBar = document.getElementById("loading-bar");
+      const loadingText = document.getElementById("loading-text");
+      const startButton = document.getElementById("start-button");
+      const loadingScreen = document.getElementById("loading-screen");
+
+      let progress = 0;
+      const loadingInterval = setInterval(() => {
+        progress += Math.random() * 5;
+        if (progress >= 100) {
+          progress = 100;
+          clearInterval(loadingInterval);
+          loadingText.textContent = "Loading complete!";
+          startButton.style.display = "block";
+        }
+        loadingBar.style.width = `${progress}%`;
+      }, 200);
+
+      // Start button event listener
+      startButton.addEventListener("click", () => {
+        loadingScreen.style.display = "none";
+        initializeSimulator();
+      });
+
+      // Initialize the simulator
+      async function initializeSimulator() {
+        try {
+          // Import the main module
+          const { default: main } = await import("../src/main.ts");
+
+          // The main module will handle initialization
+          console.log("YSFLIGHT Web initialized");
+        } catch (error) {
+          console.error("Failed to initialize YSFLIGHT Web:", error);
+          loadingScreen.style.display = "flex";
+          loadingText.textContent = `Error: ${error.message}`;
+          loadingText.style.color = "red";
+        }
+      }
+    </script>
+  </body>
+</html>
